@@ -1,6 +1,5 @@
 #!/usr/bin/env python  
 import roslib
-roslib.load_manifest('ee106b_lab2')
 import rospy
 import math
 import numpy as np
@@ -27,7 +26,12 @@ class ObjectTemplate(object):
         return self.T_ar_obj.translation
 
 OBJECT_TEMPLATES = {
-    ObjectTemplate(name='block_0', ar_marker='ar_marker_0', t_ar_obj=[0.0, 0.0, -0.01]),
+    ObjectTemplate(name='block_0', 
+                   ar_marker='ar_marker_0', 
+                   t_ar_obj=[0.0, 0.0, -0.02], 
+                   R_ar_obj=np.array([[1, 0, 0],
+                                      [0, 0, -1],
+                                      [0, 1, 0]])),
 }
 
 if __name__ == '__main__':
@@ -42,7 +46,7 @@ if __name__ == '__main__':
     while not rospy.is_shutdown():
         try:
             for object_template in OBJECT_TEMPLATES:
-                broadcaster.sendTransform(object_template.t_ar_obj,object_template. q_ar_obj, listener.getLatestCommonTime('base', 'left_hand_camera'), object_template.name, object_template.ar_marker)
+                broadcaster.sendTransform(object_template.t_ar_obj,object_template.q_ar_obj, listener.getLatestCommonTime('base', 'left_hand_camera'), object_template.name, object_template.ar_marker)
         except:
             continue
         rate.sleep()
