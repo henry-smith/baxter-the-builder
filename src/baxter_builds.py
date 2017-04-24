@@ -79,16 +79,16 @@ def move_to_point_cartesian(position, orientation, arm, parent_frame):
 if __name__ == '__main__':
     rospy.init_node('baxter_builds')
 
-    # Set up MoveIt
-    robot = moveit_commander.RobotCommander()
-    scene = moveit_commander.PlanningSceneInterface()
-    right_arm = moveit_commander.MoveGroupCommander('right_arm')
-    right_arm.set_pose_reference_frame('base')
-    right_arm.set_planner_id('RRTConnectkConfigDefault')
-    right_arm.set_planning_time(5)
-    # Set up gripper
-    right_gripper = baxter_gripper.Gripper('right')
-    right_gripper.calibrate()
+    # # Set up MoveIt
+    # robot = moveit_commander.RobotCommander()
+    # scene = moveit_commander.PlanningSceneInterface()
+    # right_arm = moveit_commander.MoveGroupCommander('right_arm')
+    # right_arm.set_pose_reference_frame('base')
+    # right_arm.set_planner_id('RRTConnectkConfigDefault')
+    # right_arm.set_planning_time(5)
+    # # Set up gripper
+    # right_gripper = baxter_gripper.Gripper('right')
+    # right_gripper.calibrate()
 
     # For recording Trajectory
     # rospy.wait_for_service('endpoint_info')
@@ -98,7 +98,7 @@ if __name__ == '__main__':
 
     listener = tf.TransformListener()
     from_frame = 'base'
-    to_frame = 'block_0'
+    to_frame = 'ar_marker_0'
     time.sleep(1)
     if not listener.frameExists(from_frame):
         print 'from_frame not found'

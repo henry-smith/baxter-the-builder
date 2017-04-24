@@ -5,6 +5,8 @@ Startup requires these commands in baxter shell in separate terminals:
 roslaunch baxter_the_builder baxter_left_hand_track.launch 
 (file contains launching ar_marker tracker + block pose publisher)
 
+rosrun baxter_tools camera_control.py -o left_hand_camera -r 1280x800
+
 rosrun baxter_interface joint_trajectory_action_server.py
 roslaunch baxter_moveit_config baxter_grippers.launch
 
