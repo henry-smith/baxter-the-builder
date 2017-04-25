@@ -1,0 +1,2 @@
+time,left_s0,left_s1,left_e0,left_e1,left_w0,left_w1,left_w2,left_gripper,right_s0,right_s1,right_e0,right_e1,right_w0,right_w1,right_w2,right_gripper,goal_block_x,goal_block_y,goal_block_zgoal_block_q0,goal_block_q1,goal_block_q2,goal_block_q3
+1.785314,0.592116584124,-0.25195634441,-1.15355355249,1.46150019566,0.194815560061,1.08605839782,0.0713301066367,0.0,-0.137291280516,-0.969475857944,0.827966130261,1.44155844542,-0.65462630123,0.832568072625,-0.15569904997,100.0,

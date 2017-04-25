@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Baxter_the_builder main run script
+Baxter_the_builder regrasping node
 Author: Henry Smith & Andrew Chan
 """
 import numpy as np
