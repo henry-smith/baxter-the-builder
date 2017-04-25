@@ -7,6 +7,7 @@ import rospy
 import baxter_interface
 import tf
 import argparse
+import numpy as np
 from geometry_msgs.msg import PoseStamped, Pose
 
 
@@ -78,45 +79,34 @@ class FeatureRecorder(object):
                 print 'to_frame not found'
                 exit(0)
 
-            with open(self.filename, 'w') as f:
-                f.write('time,')
-                f.write(','.join([j for j in joints_left]) + ',')
-                f.write('left_gripper,')
-                f.write(','.join([j for j in joints_right]) + ',')
-                f.write('right_gripper,' +
-                    'goal_block_x,goal_block_y,goal_block_z' + 
-                    'goal_block_q0,goal_block_q1,goal_block_q2,goal_block_q3\n')
+            traj = []
+            while not self.done():
+                # Look for gripper button presses
+                if self.io_left_lower.state:
+                    self.left_gripper.open()
+                elif self.io_left_upper.state:
+                    self.left_gripper.close()
+                if self.io_right_lower.state:
+                    self.right_gripper.open()
+                elif self.io_right_upper.state:
+                    self.right_gripper.close()
+                angles_left = [self.left_limb.joint_angle(j)
+                               for j in joints_left]
+                angles_right = [self.right_limb.joint_angle(j)
+                                for j in joints_right]
 
-                while not self.done():
-                    # Look for gripper button presses
-                    if self.io_left_lower.state:
-                        self.left_gripper.open()
-                    elif self.io_left_upper.state:
-                        self.left_gripper.close()
-                    if self.io_right_lower.state:
-                        self.right_gripper.open()
-                    elif self.io_right_upper.state:
-                        self.right_gripper.close()
-                    angles_left = [self.left_limb.joint_angle(j)
-                                   for j in joints_left]
-                    angles_right = [self.right_limb.joint_angle(j)
-                                    for j in joints_right]
+                output = [self._time_stamp(), self.right_gripper.position()]
+                output.extend(angles_right)
 
-                    f.write("%f," % (self._time_stamp(),))
-
-                    f.write(','.join([str(x) for x in angles_left]) + ',')
-                    f.write(str(self.left_gripper.position()) + ',')
-
-                    f.write(','.join([str(x) for x in angles_right]) + ',')
-                    f.write(str(self.right_gripper.position()) + ',')
-
-                    t = listener.getLatestCommonTime(from_frame, to_frame)
-                    pos, quat = listener.lookupTransform(from_frame, to_frame, t)
-                    f.write(','.join([str(pos.x), str(pos.y), str(pos.y)] + ','))
-                    f.write(','.join([str(quat.x), str(quat.y), str(quat.y), str(quat.w)] + '\n'))
-
-                    self.rate.sleep()
-
+                t = listener.getLatestCommonTime(from_frame, to_frame)
+                pos, quat = listener.lookupTransform(from_frame, to_frame, t)
+                output.extend([str(pos[0]), str(pos[1]), str(pos[2])])
+                output.extend([str(quat[0]), str(quat[1]), str(quat[2]), str(quat[3])])
+                traj.append(np.array(output))
+                self.rate.sleep()
+            trajectory = np.vstack(tuple(traj))
+            np.save(self.filename, trajectory)
+            print('Saved')
 
 def main():
     arg_fmt = argparse.RawDescriptionHelpFormatter
@@ -142,9 +132,9 @@ def main():
 
     recorder = FeatureRecorder(args.filename, args.record_rate)
     rospy.on_shutdown(recorder.stop)
-
+    rospy.sleep(5)
     print("Recording. Press Ctrl-C to stop.")
-    recorder.record('block_3')
+    recorder.record('block_0')
 
     print("\nDone.")
 

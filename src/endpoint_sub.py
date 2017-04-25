@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-EE106b Lab 1 
+EE106b Final Project 
 Authors: Henry Smith Andrew Chan
 """
 import copy
