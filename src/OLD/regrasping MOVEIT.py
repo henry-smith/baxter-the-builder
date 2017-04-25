@@ -87,10 +87,8 @@ class Regrasper:
         else:
             print("INVALID POSE - No Valid Joint Solution Found.")
         arm = baxter_interface.Limb(limb)
-        i = 0
-        while not rospy.is_shutdown() and i < 100:
+        while not rospy.is_shutdown():
             arm.set_joint_positions(limb_joints)
-            i += 1
             rospy.sleep(0.01)
         return 0
 

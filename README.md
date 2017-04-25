@@ -1,6 +1,7 @@
 # baxter_the_builder
 ## Startup
-Startup requires these commands in baxter shell in separate terminals:
+Startup requires these commands in baxter shell (possibly in separate terminals):
+rosrun baxter_tools enable_robot.py -e
 
 roslaunch baxter_the_builder baxter_left_hand_track.launch 
 (file contains launching ar_marker tracker + block pose publisher)
