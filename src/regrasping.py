@@ -106,17 +106,25 @@ class Regrasper:
         self.move_to_point(position + np.array([0,0,.05]), quaternion)
 
     def flip(self, block):
-        b_pos = self.align_with_top(block)
-        quat = [-.245, 0.677,.26,.64]
-
-        self.move_to_point(b_pos + np.array([0,0,.15]), quat)
+        b_pos = self.align_with_top(block, True)
+        #quat = [-.245, 0.677,.26,.64]
+        positions = self.limb.joint_angles()
+        cmd = copy.deepcopy(positions)
+        print cmd
+        cmd['right_w1'] -= 1.4
+        self.limb.move_to_joint_positions(cmd)
+        #self.move_to_point(b_pos + np.array([0,0,.15]), quat)
         t = self.listener.getLatestCommonTime(self.parent_frame, 'right_gripper')
         position, quaternion = self.listener.lookupTransform(self.parent_frame, 'right_gripper', t)
-        self.move_to_point(b_pos + np.array([0,0,.05]), quaternion)
+        self.move_to_point(b_pos + np.array([0,0,.02]), quaternion)
         self.gripper.open()
 
+        new_pos = b_pos + np.array([0,0,.1])
 
-    def align_with_top(self, block):
+        self.move_to_point(new_pos, quaternion)
+
+
+    def align_with_top(self, block, realign_with_base = False):
         if not self.listener.frameExists(self.parent_frame):
             print 'parent frame not found'
             exit(0)
@@ -143,8 +151,58 @@ class Regrasper:
         cmd['right_w2'] = .5
         while not rospy.is_shutdown():
             self.limb.set_joint_velocities(cmd)
-            t = self.listener.getLatestCommonTime(self.parent_frame, block)
+            t = self.listener.getLatestCommonTime('right_gripper', block)
             position, quaternion = self.listener.lookupTransform(block, 'right_gripper', t)
+            rot = np.array(trans.quaternion_matrix(quaternion)[:3,:3])
+            count = 0
+            for i in range(3):
+                for j in range(3):
+                    if abs(abs(rot[i,j])-1) < .02:
+                        count += 1
+            print(count)
+            if count >= 3:
+                break
+
+        print('done')
+        t = self.listener.getLatestCommonTime('base', 'right_gripper')
+        position, quaternion = self.listener.lookupTransform('base', 'right_gripper', t)
+        self.move_to_point(b_pos - np.array([0,0,.01]), quaternion)
+        self.gripper.close()
+        if realign_with_base:
+            self.move_to_point(b_pos + np.array([0,0,.03]), new_quat)
+        else:
+            self.move_to_point(b_pos + np.array([0,0,.03]), quaternion)
+        print("Move Succesful")
+        return b_pos
+
+    def stack_bricks(self, b1, b2):
+        self.align_with_top(b1)
+        if not self.listener.frameExists(self.parent_frame):
+            print 'parent frame not found'
+            exit(0)
+        if not self.listener.frameExists(b2):
+            print 'block not found'
+            exit(0)
+        self.listener.waitForTransform(self.parent_frame, b2, rospy.Time(), rospy.Duration(4.0))
+        t = self.listener.getLatestCommonTime(self.parent_frame, b2)
+
+        b_pos, b_quat = self.listener.lookupTransform(self.parent_frame, b2, t)
+
+        new_quat = np.array([1,0,0,0])
+        new_pos = b_pos + np.array([0,0,.2])
+
+        self.move_to_point(new_pos, new_quat)
+        print("Move Succesful")
+
+        velocities = self.limb.joint_velocities()
+        cmd = copy.deepcopy(velocities)
+        for joint in cmd.keys():
+            cmd[joint] = 0
+        cmd['right_w2'] = .5
+        while not rospy.is_shutdown():
+            self.limb.set_joint_velocities(cmd)
+            t = self.listener.getLatestCommonTime(self.parent_frame, b2)
+            position, quaternion = self.listener.lookupTransform(b2, 'right_gripper', t)
             rot = np.array(trans.quaternion_matrix(quaternion)[:3,:3])
             count = 0
             for i in range(3):
@@ -153,13 +211,12 @@ class Regrasper:
                         count += 1
             if count >= 3:
                 break
-        print('done')
 
-        self.move_to_point(b_pos - np.array([0,0,.02]), quaternion)
+        self.move_to_point(b_pos + np.array([0,0,.055]), quaternion)
         print("Move Succesful")
-        self.gripper.close()
+        self.gripper.open()
 
-        self.move_to_point(b_pos + np.array([0,0,.03]), quaternion)
+        self.move_to_point(b_pos + np.array([0,0,.08]), quaternion)
         return b_pos
 
 
@@ -171,10 +228,14 @@ if __name__ == '__main__':
     # endpointLoad = rospy.ServiceProxy('endpoint_load', endpoint_load)
 
     right_regrasper = Regrasper('right')
-    
-    right_regrasper.adjust_yaw('block_0')
-    right_regrasper.flip('block_3')
-    right_regrasper.adjust_yaw('block_0')
+    #right_regrasper.adjust_yaw('block_3')
+    #right_regrasper.stack_bricks('block_3', 'block_0')
+    #right_regrasper.adjust_yaw('block_2')
+    right_regrasper.flip('block_2')
+    #right_regrasper.stack_bricks('block_0', 'block_2')
+    rospy.sleep(10)
+    # right_regrasper.flip('block_3')
+    # right_regrasper.adjust_yaw('block_0')
 
 
 

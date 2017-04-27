@@ -4,11 +4,11 @@ Startup requires these commands in baxter shell (possibly in separate terminals)
 
 rosrun baxter_tools enable_robot.py -e
 rosrun baxter_tools tuck_arms.py -u
-
+rosrun baxter_tools camera_control.py -o left_hand_camera -r 1280x800
 roslaunch baxter_the_builder baxter_left_hand_track.launch 
 (file contains launching ar_marker tracker + block pose publisher)
 
-rosrun baxter_tools camera_control.py -o left_hand_camera -r 1280x800
+
 
 <!-- (for MoveIt)
 rosrun baxter_interface joint_trajectory_action_server.py
