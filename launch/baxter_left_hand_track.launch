@@ -1,8 +1,8 @@
 <launch>
 
-  <arg name="marker_size" default="5.5" />
+  <arg name="marker_size" default="4.8" />
   <arg name="max_new_marker_error" default="0.08" />
-  <arg name="max_track_error" default="0.2" />
+  <arg name="max_track_error" default="0.1" />
   <arg name="cam_image_topic" default="/cameras/left_hand_camera/image" />
   <arg name="cam_info_topic" default="/cameras/left_hand_camera/camera_info" />
   <arg name="output_frame" default="/left_hand_camera" />

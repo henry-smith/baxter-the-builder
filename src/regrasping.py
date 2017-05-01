@@ -33,6 +33,8 @@ from baxter_core_msgs.srv import (
     SolvePositionIKRequest,
 )
 
+BLOCK_0 = ('ar_marker_0', 'ar_marker_1', 'ar_marker_2', 'ar_marker_3')
+
 class Regrasper:
     def __init__(self, limb):
         rospy.init_node('regrasping_' + limb)

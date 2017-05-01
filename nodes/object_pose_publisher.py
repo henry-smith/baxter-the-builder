@@ -26,24 +26,24 @@ class ObjectTemplate(object):
         return self.T_ar_obj.translation
 
 OBJECT_TEMPLATES = {
-    ObjectTemplate(name='block_0', 
-                   ar_marker='ar_marker_0', 
-                   t_ar_obj=[0.0, 0.0, -0.025], 
-                   R_ar_obj=np.array([[1, 0, 0],
-                                      [0, 0, -1],
-                                      [0, 1, 0]])),
-    ObjectTemplate(name='block_3', 
-                   ar_marker='ar_marker_3', 
-                   t_ar_obj=[0.0, 0.0, 0.0], 
-                   R_ar_obj=np.array([[1, 0, 0],
-                                      [0, 0, -1],
-                                      [0, 1, 0]])),
-    ObjectTemplate(name='block_2', 
-                   ar_marker='ar_marker_2', 
-                   t_ar_obj=[0.0, 0.0, -0.02], 
-                   R_ar_obj=np.array([[1, 0, 0],
-                                      [0, 0, -1],
-                                      [0, 1, 0]]))
+    # ObjectTemplate(name='block_0', 
+    #                ar_marker='ar_marker_0', 
+    #                t_ar_obj=[0.0, 0.0, -0.045], 
+    #                R_ar_obj=np.array([[1, 0, 0],
+    #                                   [0, 0, -1],
+    #                                   [0, 1, 0]])),
+    # ObjectTemplate(name='block_0', 
+    #                ar_marker='ar_marker_3', 
+    #                t_ar_obj=[0.0, 0.0, -0.045], 
+    #                R_ar_obj=np.array([[1, 0, 0],
+    #                                   [0, 0, -1],
+    #                                   [0, 1, 0]])),
+    # ObjectTemplate(name='block_2', 
+    #                ar_marker='ar_marker_2', 
+    #                t_ar_obj=[0.0, 0.0, -0.02], 
+    #                R_ar_obj=np.array([[1, 0, 0],
+    #                                   [0, 0, -1],
+    #                                   [0, 1, 0]]))
 }
 
 if __name__ == '__main__':
