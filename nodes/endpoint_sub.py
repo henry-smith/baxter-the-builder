@@ -36,12 +36,12 @@ class EndpointSubscriber:
 
 
 	def begin(self):
-		rospy.init_node('listener', anonymous=True)
+		rospy.init_node('endpoint_sub', anonymous=True)
 		rospy.Subscriber("/robot/limb/left/endpoint_state", EndpointState, self.saveVals)
 		rospy.Service('endpoint_info', endpoint_service, self.returnValues)
 		rospy.Service('endpoint_load', endpoint_load, self.beginSave)
 		rospy.Service('endpoint_save', endpoint_save, self.saveArray)
-		print 'Success'
+		print 'Endpoint subscriber begun'
 		rospy.spin()
 
 	def beginSave(self, req):
@@ -63,7 +63,6 @@ class EndpointSubscriber:
 
 	def saveArray(self, req):
 		with open(req.filename, 'wb') as f:
-			print "hehre"
 			pickle.dump([self.poses, self.twists] , f)
 		self.saving = False
 		self.poses = []

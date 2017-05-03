@@ -12,5 +12,8 @@
 
   <node name="object_pose_publisher" pkg="baxter_the_builder" type="object_pose_publisher.py" respawn="false" output="screen" />
 
+  <node name="endpoint_sub" pkg="baxter_the_builder" type="endpoint_sub.py" respawn="false" output="screen" />
+
+  <node pkg="rviz" type="rviz" name="rviz"/>
 </launch>
 
