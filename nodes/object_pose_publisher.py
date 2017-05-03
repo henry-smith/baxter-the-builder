@@ -9,10 +9,9 @@ import sys
 
 from core import RigidTransform
 
-class ObjectTemplate(object):
+class TransformTemplate(object):
     """ Struct for specifying object templates """
     def __init__(self, name, ar_marker, R_ar_obj=np.eye(3), t_ar_obj=np.zeros(3)):
-        self.name = name
         self.ar_marker = ar_marker
         self.T_ar_obj = RigidTransform(rotation=R_ar_obj, translation=t_ar_obj,
                                        from_frame=name, to_frame=ar_marker)
@@ -25,25 +24,32 @@ class ObjectTemplate(object):
     def t_ar_obj(self):
         return self.T_ar_obj.translation
 
-OBJECT_TEMPLATES = {
-    # ObjectTemplate(name='block_0', 
-    #                ar_marker='ar_marker_0', 
-    #                t_ar_obj=[0.0, 0.0, -0.045], 
-    #                R_ar_obj=np.array([[1, 0, 0],
-    #                                   [0, 0, -1],
-    #                                   [0, 1, 0]])),
-    # ObjectTemplate(name='block_0', 
-    #                ar_marker='ar_marker_3', 
-    #                t_ar_obj=[0.0, 0.0, -0.045], 
-    #                R_ar_obj=np.array([[1, 0, 0],
-    #                                   [0, 0, -1],
-    #                                   [0, 1, 0]])),
-    # ObjectTemplate(name='block_2', 
-    #                ar_marker='ar_marker_2', 
-    #                t_ar_obj=[0.0, 0.0, -0.02], 
-    #                R_ar_obj=np.array([[1, 0, 0],
-    #                                   [0, 0, -1],
-    #                                   [0, 1, 0]]))
+BLOCKS = {('block_0',(
+    TransformTemplate(name='block_0',
+                      ar_marker='ar_marker_0', 
+                      t_ar_obj=[0.0, 0.0, -0.032], 
+                      R_ar_obj=np.array([[1, 0, 0],
+                                         [0, 0, -1],
+                                         [0, 1, 0]])),
+    TransformTemplate(name='block_0',
+                      ar_marker='ar_marker_3', 
+                      t_ar_obj=[0.0, 0.0, -0.032], 
+                      R_ar_obj=np.array([[0, -1, 0],
+                                         [0, 0, -1],
+                                         [1, 0, 0]])),
+    TransformTemplate(name='block_0',
+                      ar_marker='ar_marker_4', 
+                      t_ar_obj=[0.0, 0.0, -0.032], 
+                      R_ar_obj=np.array([[-1, 0, 0],
+                                         [0, 0, -1],
+                                         [0, -1, 0]])),
+    TransformTemplate(name='block_0',
+                      ar_marker='ar_marker_5', 
+                      t_ar_obj=[0.0, 0.0, -0.032], 
+                      R_ar_obj=np.array([[0, 1, 0],
+                                         [0, 0, -1],
+                                         [-1, 0, 0]]))
+    ))
 }
 
 if __name__ == '__main__':
@@ -51,14 +57,25 @@ if __name__ == '__main__':
 
     broadcaster = tf.TransformBroadcaster()
     listener = tf.TransformListener()
+    rospy.sleep(1.0)
  
     print 'Publishing object pose'
     
     rate = rospy.Rate(100.0)
     while not rospy.is_shutdown():
         try:
-            for object_template in OBJECT_TEMPLATES:
-                broadcaster.sendTransform(object_template.t_ar_obj,object_template.q_ar_obj, listener.getLatestCommonTime('base', 'left_hand_camera'), object_template.name, object_template.ar_marker)
+          for block in BLOCKS:
+            transform_to_use = None
+            most_recent_time = rospy.Time.now()
+            for transform_template in block[1]:
+              if listener.frameExists(transform_template.ar_marker):
+                t = listener.getLatestCommonTime('base', transform_template.ar_marker)
+                if t > most_recent_time:
+                  transform_to_use = transform_template
+                  most_recent_time = t
+            broadcaster.sendTransform(transform_to_use.t_ar_obj,transform_to_use.q_ar_obj, listener.getLatestCommonTime('base', 'left_hand_camera'), block[0], transform_to_use.ar_marker)
+            rate.sleep()
         except:
-            continue
+          print("Unexpected error:", sys.exc_info()[0])
+          continue
         rate.sleep()

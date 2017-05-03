@@ -1,13 +1,14 @@
 # baxter_the_builder
 ## Startup
-Startup requires these commands in baxter shell (possibly in separate terminals):
+Startup requires these commands in baxter shell (./baxter.sh) (possibly in separate terminals):
 
 rosrun baxter_tools enable_robot.py -e
 rosrun baxter_tools tuck_arms.py -u
+rosrun baxter_tools camera_control.py -c right_hand_camera
 rosrun baxter_tools camera_control.py -o left_hand_camera -r 1280x800
 roslaunch baxter_the_builder baxter_left_hand_track.launch 
 (file contains launching ar_marker tracker + block pose publisher)
-
+rosrun rviz rviz
 
 
 <!-- (for MoveIt)

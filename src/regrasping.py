@@ -33,7 +33,7 @@ from baxter_core_msgs.srv import (
     SolvePositionIKRequest,
 )
 
-BLOCK_0 = ('ar_marker_0', 'ar_marker_1', 'ar_marker_2', 'ar_marker_3')
+PI = np.pi
 
 class Regrasper:
     def __init__(self, limb):
@@ -87,14 +87,14 @@ class Regrasper:
         else:
             print("INVALID POSE - No Valid Joint Solution Found.")
         
-        self.limb.move_to_joint_positions(limb_joints)
+        self.limb.move_to_joint_positions(limb_joints, threshold=0.005726646)
 
 
     def reorient_block(self, arm, block, goal):
         # Decide to come from top or side
         pass
 
-    def adjust_yaw(self, block, angle=1.2):
+    def adjust_yaw(self, block, angle=PI/2):
         b_pos = self.align_with_top(block)
         positions = self.limb.joint_angles()
         cmd = copy.deepcopy(positions)
@@ -103,13 +103,12 @@ class Regrasper:
         self.limb.move_to_joint_positions(cmd)
         t = self.listener.getLatestCommonTime(self.parent_frame, 'right_gripper')
         position, quaternion = self.listener.lookupTransform(self.parent_frame, 'right_gripper', t)
-        self.move_to_point(b_pos - np.array([0,0,.02]), quaternion)
+        self.move_to_point(b_pos - np.array([0,0,.01]), quaternion)
         self.gripper.open()
         self.move_to_point(position + np.array([0,0,.05]), quaternion)
 
     def flip(self, block):
         b_pos = self.align_with_top(block, True)
-        #quat = [-.245, 0.677,.26,.64]
         positions = self.limb.joint_angles()
         cmd = copy.deepcopy(positions)
         print cmd
@@ -209,7 +208,7 @@ class Regrasper:
             count = 0
             for i in range(3):
                 for j in range(3):
-                    if abs(abs(rot[i,j])-1) < .03:
+                    if abs(abs(rot[i,j])-1) < .01:
                         count += 1
             if count >= 3:
                 break
@@ -230,10 +229,14 @@ if __name__ == '__main__':
     # endpointLoad = rospy.ServiceProxy('endpoint_load', endpoint_load)
 
     right_regrasper = Regrasper('right')
-    #right_regrasper.adjust_yaw('block_3')
+    # right_regrasper.adjust_yaw('block_0')
+    # right_regrasper.adjust_yaw('block_0')
+    # right_regrasper.adjust_yaw('block_0')
+    # right_regrasper.adjust_yaw('block_0')
+
     #right_regrasper.stack_bricks('block_3', 'block_0')
     #right_regrasper.adjust_yaw('block_2')
-    right_regrasper.flip('block_2')
+    right_regrasper.flip('block_0')
     #right_regrasper.stack_bricks('block_0', 'block_2')
     rospy.sleep(10)
     # right_regrasper.flip('block_3')
