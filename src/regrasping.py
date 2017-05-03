@@ -42,18 +42,23 @@ class Regrasper:
         # Set up gripper
         self.gripper = baxter_gripper.Gripper(limb)
         self.gripper.calibrate()
-        self.limb = baxter_interface.Limb(limb)
 
+        # Set up limb
+        self.limb = baxter_interface.Limb(limb)
         self.limb_name = limb
+
+        # Set up tf stuff
         self.parent_frame = 'base'
         self.listener = tf.TransformListener()
-        self.rate = rospy.Rate(100)
 
+        # Set up IK solver
         self.ns = "ExternalTools/" + self.limb_name + "/PositionKinematicsNode/IKService"
         self.iksvc = rospy.ServiceProxy(self.ns, SolvePositionIK)
-        time.sleep(1)
 
-    def move_to_point(self, position, orientation):
+        self.rate = rospy.Rate(100)
+        rospy.sleep(1.0)
+
+    def move_to_point(self, position, orientation, threshold=0.008726646):
         goal = PoseStamped()
         goal.header = Header(stamp=rospy.Time.now(), frame_id='base')
 
@@ -71,6 +76,7 @@ class Regrasper:
         goal.pose.orientation.z = orientation[2]
         goal.pose.orientation.w = orientation[3]
 
+        # Solves IK
         ikreq = SolvePositionIKRequest()
         ikreq.pose_stamp.append(goal)
         try:
@@ -82,69 +88,28 @@ class Regrasper:
 
         if (resp.isValid[0]):
             print("SUCCESS - Valid Joint Solution Found:")
-            # Format solution into Limb API-compatible dictionary
+            # Format solution into limb compatible dictionary
             limb_joints = dict(zip(resp.joints[0].name, resp.joints[0].position))
+            # Moves to solution
+            self.limb.move_to_joint_positions(limb_joints, threshold=threshold)
         else:
             print("INVALID POSE - No Valid Joint Solution Found.")
-        
-        self.limb.move_to_joint_positions(limb_joints, threshold=0.005726646)
-
-
-    def reorient_block(self, arm, block, goal):
-        # Decide to come from top or side
-        pass
-
-    def adjust_yaw(self, block, angle=PI/2):
-        b_pos = self.align_with_top(block)
-        positions = self.limb.joint_angles()
-        cmd = copy.deepcopy(positions)
-        print cmd
-        cmd['right_w2'] += angle
-        self.limb.move_to_joint_positions(cmd)
-        t = self.listener.getLatestCommonTime(self.parent_frame, 'right_gripper')
-        position, quaternion = self.listener.lookupTransform(self.parent_frame, 'right_gripper', t)
-        self.move_to_point(b_pos - np.array([0,0,.01]), quaternion)
-        self.gripper.open()
-        self.move_to_point(position + np.array([0,0,.05]), quaternion)
-
-    def flip(self, block):
-        b_pos = self.align_with_top(block, True)
-        positions = self.limb.joint_angles()
-        cmd = copy.deepcopy(positions)
-        print cmd
-        cmd['right_w1'] -= 1.4
-        self.limb.move_to_joint_positions(cmd)
-        #self.move_to_point(b_pos + np.array([0,0,.15]), quat)
-        t = self.listener.getLatestCommonTime(self.parent_frame, 'right_gripper')
-        position, quaternion = self.listener.lookupTransform(self.parent_frame, 'right_gripper', t)
-        self.move_to_point(b_pos + np.array([0,0,.02]), quaternion)
-        self.gripper.open()
-
-        new_pos = b_pos + np.array([0,0,.1])
-
-        self.move_to_point(new_pos, quaternion)
-
 
     def align_with_top(self, block, realign_with_base = False):
-        if not self.listener.frameExists(self.parent_frame):
-            print 'parent frame not found'
-            exit(0)
         if not self.listener.frameExists(block):
-            print 'block not found'
+            print block + ' not found'
             exit(0)
-        self.listener.waitForTransform(self.parent_frame, block, rospy.Time(), rospy.Duration(4.0))
+
+        # Finds block position and orientation
         t = self.listener.getLatestCommonTime(self.parent_frame, block)
-
         b_pos, b_quat = self.listener.lookupTransform(self.parent_frame, block, t)
-        b_rot = trans.quaternion_matrix(b_quat)
-        bx, by, bz = b_rot[:3,0], b_rot[:3,1], b_rot[:3,2]
 
+        # Throws away original orientation
         new_quat = np.array([1,0,0,0])
         new_pos = b_pos + np.array([0,0,.1])
 
-        self.move_to_point(new_pos, new_quat)
-        print("Move Succesful")
-
+        # Moves to above brick, then rotates until alignment
+        self.move_to_point(new_pos, new_quat, threshold = .005)
         velocities = self.limb.joint_velocities()
         cmd = copy.deepcopy(velocities)
         for joint in cmd.keys():
@@ -155,46 +120,89 @@ class Regrasper:
             t = self.listener.getLatestCommonTime('right_gripper', block)
             position, quaternion = self.listener.lookupTransform(block, 'right_gripper', t)
             rot = np.array(trans.quaternion_matrix(quaternion)[:3,:3])
+            # This is very hacky, forgive me
             count = 0
             for i in range(3):
                 for j in range(3):
                     if abs(abs(rot[i,j])-1) < .02:
                         count += 1
-            print(count)
             if count >= 3:
                 break
 
-        print('done')
+        # Picks up brick
         t = self.listener.getLatestCommonTime('base', 'right_gripper')
         position, quaternion = self.listener.lookupTransform('base', 'right_gripper', t)
         self.move_to_point(b_pos - np.array([0,0,.01]), quaternion)
         self.gripper.close()
+
+        # Keeps or throws away current orientation
         if realign_with_base:
+            print('realigning')
             self.move_to_point(b_pos + np.array([0,0,.03]), new_quat)
         else:
             self.move_to_point(b_pos + np.array([0,0,.03]), quaternion)
-        print("Move Succesful")
+
+        # Returns original position for reference
         return b_pos
 
-    def stack_bricks(self, b1, b2):
-        self.align_with_top(b1)
-        if not self.listener.frameExists(self.parent_frame):
-            print 'parent frame not found'
+    def adjust_yaw(self, block, angle=PI/2):
+        if not self.listener.frameExists(block):
+            print block + ' not found'
             exit(0)
+
+        # Picks up and saves original position
+        b_pos = self.align_with_top(block)
+
+        # Rotate by just moving wrist
+        positions = self.limb.joint_angles()
+        cmd = copy.deepcopy(positions)
+        cmd['right_w2'] += angle
+        self.limb.move_to_joint_positions(cmd)
+
+        # Grabs current orientation so we don't lose it
+        t = self.listener.getLatestCommonTime(self.parent_frame, 'right_gripper')
+        position, quaternion = self.listener.lookupTransform(self.parent_frame, 'right_gripper', t)
+
+        # Moves back to blocks original position at new orientation
+        self.move_to_point(b_pos - np.array([0,0,.01]), quaternion)
+        self.gripper.open()
+        self.move_to_point(position + np.array([0,0,.05]), quaternion)
+
+    def flip(self, block):
+        # Grabs from top and realigns with base
+        b_pos = self.align_with_top(block, False)
+
+        # Rotates arm upwards
+        positions = self.limb.joint_angles()
+        cmd = copy.deepcopy(positions)
+        print cmd
+        cmd['right_w1'] -= PI/2
+        self.limb.move_to_joint_positions(cmd)
+
+        # Grabs current orientation
+        t = self.listener.getLatestCommonTime(self.parent_frame, 'right_gripper')
+        position, quaternion = self.listener.lookupTransform(self.parent_frame, 'right_gripper', t)
+
+        # Places brick in new orientation at original position
+        self.move_to_point(b_pos + np.array([0,0,.03]), quaternion)
+        self.gripper.open()
+        self.move_to_point(b_pos + np.array([0,0,.1]), quaternion)
+
+    def stack_bricks(self, b1, b2):
         if not self.listener.frameExists(b2):
             print 'block not found'
             exit(0)
+        self.align_with_top(b1)
+
+        # Moves to above next brick
         self.listener.waitForTransform(self.parent_frame, b2, rospy.Time(), rospy.Duration(4.0))
         t = self.listener.getLatestCommonTime(self.parent_frame, b2)
-
         b_pos, b_quat = self.listener.lookupTransform(self.parent_frame, b2, t)
-
         new_quat = np.array([1,0,0,0])
         new_pos = b_pos + np.array([0,0,.2])
-
         self.move_to_point(new_pos, new_quat)
-        print("Move Succesful")
 
+        # Rotates until aligned
         velocities = self.limb.joint_velocities()
         cmd = copy.deepcopy(velocities)
         for joint in cmd.keys():
@@ -208,39 +216,33 @@ class Regrasper:
             count = 0
             for i in range(3):
                 for j in range(3):
-                    if abs(abs(rot[i,j])-1) < .01:
+                    if abs(abs(rot[i,j])-1) < .03:
                         count += 1
             if count >= 3:
                 break
 
+        # Stacks 'em
         self.move_to_point(b_pos + np.array([0,0,.055]), quaternion)
         print("Move Succesful")
         self.gripper.open()
 
-        self.move_to_point(b_pos + np.array([0,0,.08]), quaternion)
+        self.move_to_point(b_pos + np.array([0,0,.09]), quaternion)
         return b_pos
 
 
 if __name__ == '__main__':
     # For recording Trajectory
-    # rospy.wait_for_service('endpoint_info')
-    # endpointSave = rospy.ServiceProxy('endpoint_save', endpoint_save)
-    # endpointInfo = rospy.ServiceProxy('endpoint_info', endpoint_service)
-    # endpointLoad = rospy.ServiceProxy('endpoint_load', endpoint_load)
+    rospy.wait_for_service('endpoint_info')
+    endpointSave = rospy.ServiceProxy('endpoint_save', endpoint_save)
+    endpointInfo = rospy.ServiceProxy('endpoint_info', endpoint_service)
+    endpointLoad = rospy.ServiceProxy('endpoint_load', endpoint_load)
 
     right_regrasper = Regrasper('right')
-    # right_regrasper.adjust_yaw('block_0')
-    # right_regrasper.adjust_yaw('block_0')
-    # right_regrasper.adjust_yaw('block_0')
-    # right_regrasper.adjust_yaw('block_0')
-
-    #right_regrasper.stack_bricks('block_3', 'block_0')
-    #right_regrasper.adjust_yaw('block_2')
-    right_regrasper.flip('block_0')
-    #right_regrasper.stack_bricks('block_0', 'block_2')
-    rospy.sleep(10)
-    # right_regrasper.flip('block_3')
-    # right_regrasper.adjust_yaw('block_0')
+    # right_regrasper.flip('block_0')
+    # right_regrasper.flip('block_0')
+    # right_regrasper.flip('block_0')
+    # right_regrasper.flip('block_0')
+    right_regrasper.stack_bricks('block_0', 'block_1')
 
 
 

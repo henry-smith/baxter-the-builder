@@ -24,7 +24,8 @@ class TransformTemplate(object):
     def t_ar_obj(self):
         return self.T_ar_obj.translation
 
-BLOCKS = {('block_0',(
+BLOCKS = {
+    ('block_0',(
     TransformTemplate(name='block_0',
                       ar_marker='ar_marker_0', 
                       t_ar_obj=[0.0, 0.0, -0.032], 
@@ -49,6 +50,14 @@ BLOCKS = {('block_0',(
                       R_ar_obj=np.array([[0, 1, 0],
                                          [0, 0, -1],
                                          [-1, 0, 0]]))
+    )),
+    ('block_1', (
+    TransformTemplate(name='block_1',
+                ar_marker='ar_marker_2', 
+                t_ar_obj=[0.0, 0.0, -0.032], 
+                R_ar_obj=np.array([[1, 0, 0],
+                                   [0, 0, -1],
+                                   [0, 1, 0]])),
     ))
 }
 
@@ -61,10 +70,12 @@ if __name__ == '__main__':
  
     print 'Publishing object pose'
     
-    rate = rospy.Rate(100.0)
+    rate = rospy.Rate(200.0)
     while not rospy.is_shutdown():
         try:
           for block in BLOCKS:
+            # This next loop finds the most recent ar_tag timestamps 
+            # and uses that for creating the block frame
             transform_to_use = None
             most_recent_time = rospy.Time.now()
             for transform_template in block[1]:
@@ -76,6 +87,5 @@ if __name__ == '__main__':
             broadcaster.sendTransform(transform_to_use.t_ar_obj,transform_to_use.q_ar_obj, listener.getLatestCommonTime('base', 'left_hand_camera'), block[0], transform_to_use.ar_marker)
             rate.sleep()
         except:
-          print("Unexpected error:", sys.exc_info()[0])
           continue
         rate.sleep()
