@@ -58,7 +58,11 @@ class Regrasper:
         self.rate = rospy.Rate(100)
         rospy.sleep(1.0)
 
+<<<<<<< HEAD
     def move_to_point(self, position, orientation, threshold=0.008726646, timeout = 15.0):
+=======
+    def move_to_point(self, position, orientation, threshold=0.008726646):
+>>>>>>> ff14460e4cdfe00f30a96630ef4cc0aaf3a08cd5
         goal = PoseStamped()
         goal.header = Header(stamp=rospy.Time.now(), frame_id='base')
 
@@ -91,7 +95,11 @@ class Regrasper:
             # Format solution into limb compatible dictionary
             limb_joints = dict(zip(resp.joints[0].name, resp.joints[0].position))
             # Moves to solution
+<<<<<<< HEAD
             self.limb.move_to_joint_positions(limb_joints, threshold=threshold, timeout=timeout)
+=======
+            self.limb.move_to_joint_positions(limb_joints, threshold=threshold)
+>>>>>>> ff14460e4cdfe00f30a96630ef4cc0aaf3a08cd5
         else:
             print("INVALID POSE - No Valid Joint Solution Found.")
 
@@ -101,6 +109,7 @@ class Regrasper:
             exit(0)
 
         # Finds block position and orientation
+<<<<<<< HEAD
         self.listener.waitForTransform(self.parent_frame, block, rospy.Time(), rospy.Duration(4.0))
         t = self.listener.getLatestCommonTime(self.parent_frame, block)
         b_pos, b_quat = self.listener.lookupTransform(self.parent_frame, block, t)
@@ -108,6 +117,11 @@ class Regrasper:
             on_side = False
         else: 
             on_side = True
+=======
+        t = self.listener.getLatestCommonTime(self.parent_frame, block)
+        b_pos, b_quat = self.listener.lookupTransform(self.parent_frame, block, t)
+
+>>>>>>> ff14460e4cdfe00f30a96630ef4cc0aaf3a08cd5
         # Throws away original orientation
         new_quat = np.array([1,0,0,0])
         new_pos = b_pos + np.array([0,0,.1])
@@ -126,6 +140,7 @@ class Regrasper:
             position, quaternion = self.listener.lookupTransform(block, 'right_gripper', t)
             rot = np.array(trans.quaternion_matrix(quaternion)[:3,:3])
             # This is very hacky, forgive me
+<<<<<<< HEAD
 
             if on_side:
                 count = 0
@@ -143,6 +158,15 @@ class Regrasper:
                             count += 1
                 if count >= 3:
                     break
+=======
+            count = 0
+            for i in range(3):
+                for j in range(3):
+                    if abs(abs(rot[i,j])-1) < .02:
+                        count += 1
+            if count >= 3:
+                break
+>>>>>>> ff14460e4cdfe00f30a96630ef4cc0aaf3a08cd5
 
         # Picks up brick
         t = self.listener.getLatestCommonTime('base', 'right_gripper')
@@ -155,7 +179,12 @@ class Regrasper:
             print('realigning')
             self.move_to_point(b_pos + np.array([0,0,.03]), new_quat)
         else:
+<<<<<<< HEAD
             self.move_to_point(b_pos + np.array([0,0,.05]), quaternion)
+=======
+            self.move_to_point(b_pos + np.array([0,0,.03]), quaternion)
+
+>>>>>>> ff14460e4cdfe00f30a96630ef4cc0aaf3a08cd5
         # Returns original position for reference
         return b_pos
 
@@ -189,6 +218,10 @@ class Regrasper:
         # Rotates arm upwards
         positions = self.limb.joint_angles()
         cmd = copy.deepcopy(positions)
+<<<<<<< HEAD
+=======
+        print cmd
+>>>>>>> ff14460e4cdfe00f30a96630ef4cc0aaf3a08cd5
         cmd['right_w1'] -= PI/2
         self.limb.move_to_joint_positions(cmd)
 
@@ -290,6 +323,7 @@ if __name__ == '__main__':
     # right_regrasper.flip('block_0')
     # right_regrasper.flip('block_0')
     # right_regrasper.flip('block_0')
+<<<<<<< HEAD
     #right_regrasper.stack_bricks('block_0', 'block_1')
     right_regrasper.align_with_top('block_0')
     right_regrasper.gripper.open()
@@ -309,6 +343,9 @@ if __name__ == '__main__':
 
     print "DONE"
     rospy.sleep(2.0)
+=======
+    right_regrasper.stack_bricks('block_0', 'block_1')
+>>>>>>> ff14460e4cdfe00f30a96630ef4cc0aaf3a08cd5
 
 
 

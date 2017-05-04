@@ -70,7 +70,7 @@ if __name__ == '__main__':
  
     print 'Publishing object pose'
     
-    rate = rospy.Rate(100.0)
+    rate = rospy.Rate(200.0)
     while not rospy.is_shutdown():
         try:
           for block in BLOCKS:
@@ -87,7 +87,11 @@ if __name__ == '__main__':
             if transform_to_use is not None:
               broadcaster.sendTransform(transform_to_use.t_ar_obj,transform_to_use.q_ar_obj, listener.getLatestCommonTime('base', 'left_hand_camera'), block[0], transform_to_use.ar_marker)
             rate.sleep()
+<<<<<<< HEAD
         except Exception,e: 
           print str(e)
+=======
+        except:
+>>>>>>> ff14460e4cdfe00f30a96630ef4cc0aaf3a08cd5
           continue
         rate.sleep()
