@@ -35,7 +35,7 @@ from baxter_core_msgs.srv import (
 
 PI = np.pi
 
-class Regrasper:
+class Builder:
     def __init__(self, limb):
         rospy.init_node('regrasping_' + limb)
 
@@ -159,82 +159,6 @@ class Regrasper:
         # Returns original position for reference
         return b_pos
 
-    def adjust_yaw(self, block, angle=PI/2):
-        if not self.listener.frameExists(block):
-            print block + ' not found'
-            exit(0)
-
-        # Picks up and saves original position
-        b_pos = self.align_with_top(block)
-
-        # Rotate by just moving wrist
-        positions = self.limb.joint_angles()
-        cmd = copy.deepcopy(positions)
-        cmd['right_w2'] += angle
-        self.limb.move_to_joint_positions(cmd)
-
-        # Grabs current orientation so we don't lose it
-        t = self.listener.getLatestCommonTime(self.parent_frame, 'right_gripper')
-        position, quaternion = self.listener.lookupTransform(self.parent_frame, 'right_gripper', t)
-
-        # Moves back to blocks original position at new orientation
-        self.move_to_point(b_pos - np.array([0,0,.01]), quaternion)
-        self.gripper.open()
-        self.move_to_point(position + np.array([0,0,.05]), quaternion)
-
-    def flip(self, block):
-        # Grabs from top and realigns with base
-        b_pos = self.align_with_top(block, True)
-
-        # Rotates arm upwards
-        positions = self.limb.joint_angles()
-        cmd = copy.deepcopy(positions)
-        cmd['right_w1'] -= PI/2
-        self.limb.move_to_joint_positions(cmd)
-
-
-        # Rotates until aligned
-        velocities = self.limb.joint_velocities()
-        cmd = copy.deepcopy(velocities)
-        for joint in cmd.keys():
-            cmd[joint] = 0
-        cmd['right_w2'] = .5
-        while not rospy.is_shutdown():
-            self.limb.set_joint_velocities(cmd)
-            t = self.listener.getLatestCommonTime(self.parent_frame, 'right_gripper')
-            position, quaternion = self.listener.lookupTransform(self.parent_frame, 'right_gripper', t)
-            rot = np.array(trans.quaternion_matrix(quaternion)[:3,:3])
-            if abs(np.dot(rot[:2,1], rot[:2,2])) < .01:
-                break
-
-        # Grabs current orientation
-        t = self.listener.getLatestCommonTime(self.parent_frame, 'right_gripper')
-        position, quaternion = self.listener.lookupTransform(self.parent_frame, 'right_gripper', t)
-
-        # Places brick in new orientation at original position
-        self.move_to_point(b_pos + np.array([0,0,.04]), quaternion)
-        self.gripper.open()
-        self.move_to_point(b_pos + np.array([0,0,.1]), quaternion)
-
-    def flip_v2(self, block):
-        # Grabs from top and realigns with base
-        b_pos = self.align_with_top(block, True)
-
-        # Rotates arm upwards
-        positions = self.limb.joint_angles()
-        cmd = copy.deepcopy(positions)
-        cmd['right_w1'] -= PI/2
-        self.limb.move_to_joint_positions(cmd)
-
-        # Grabs current orientation
-        t = self.listener.getLatestCommonTime(self.parent_frame, 'right_gripper')
-        position, quaternion = self.listener.lookupTransform(self.parent_frame, 'right_gripper', t)
-
-        # Places brick in new orientation at original position
-        self.move_to_point(b_pos + np.array([0,0,.04]), quaternion)
-        self.gripper.open()
-        self.move_to_point(b_pos + np.array([0,0,.1]), quaternion)
-
     def stack_bricks(self, b1, b2):
         if not self.listener.frameExists(b2):
             print 'block not found'
@@ -276,83 +200,6 @@ class Regrasper:
         self.move_to_point(b_pos + np.array([0,0,.09]), quaternion)
         return b_pos
 
-    def reorient(self, block, orientation):
-        if not self.listener.frameExists(block):
-            print block + ' not found'
-            exit(0)
-
-        # Finds block position and orientation
-        t = self.listener.getLatestCommonTime(self.parent_frame, block)
-        b_pos, b_quat = self.listener.lookupTransform(self.parent_frame, block, t)
-
-    def record_orientation_change(self, block):
-        if not self.listener.frameExists(block):
-            print block + ' not found'
-            exit(0)
-
-        # Finds block position and orientation
-        self.listener.waitForTransform(self.parent_frame, block, rospy.Time(), rospy.Duration(4.0))
-        t = self.listener.getLatestCommonTime(self.parent_frame, block)
-        pos1, quat1 = self.listener.lookupTransform(self.parent_frame, block, t)
-
-        print trans.quaternion_matrix(quat1)
-
-        self.flip(block)
-
-        # Finds block position and orientation
-        self.listener.waitForTransform(self.parent_frame, block, rospy.Time(), rospy.Duration(4.0))
-        t = self.listener.getLatestCommonTime(self.parent_frame, block)
-        pos2, quat2 = self.listener.lookupTransform(self.parent_frame, block, t)
-
-        print trans.quaternion_matrix(quat2)
-
-        print(trans.quaternion_matrix(np.array(quat2) - np.array(quat1)))
-
-        print(np.array(trans.quaternion_matrix(quat2))- np.array(trans.quaternion_matrix(quat1)))
-
-    def reorient(self, block, goal, isBlock=True):
-        if not self.listener.frameExists(block):
-            print block + ' not found'
-            exit(0)
-        if isBlock:
-            if not self.listener.frameExists(goal):
-                print goal + ' not found'
-                exit(0)
-            self.listener.waitForTransform(self.parent_frame, goal, rospy.Time(), rospy.Duration(4.0))
-            t = self.listener.getLatestCommonTime(self.parent_frame, goal)
-            _, goal = self.listener.lookupTransform(self.parent_frame, goal, t)
-
-        # Finds block position and orientation
-        self.listener.waitForTransform(self.parent_frame, block, rospy.Time(), rospy.Duration(4.0))
-        t = self.listener.getLatestCommonTime(self.parent_frame, block)
-        pos1, quat1 = self.listener.lookupTransform(self.parent_frame, block, t)
-        queue = []
-        print goal
-        print quat1
-        print trans.quaternion_matrix(goal)
-        print trans.quaternion_matrix(quat1)
-        # pinverint trans.rotation_matrix(angle, direction)
-
-    def find_state(self, quaternion):
-        rotation = trans.quaternion_matrix(quaternion)
-        if abs(1-rotation[0,0]) < .01:
-            return 5
-        if abs(1-abs(rotation[0,0])) < .01:
-            return 0
-        if abs(1-rotation[2,0]) < .01:
-            return 4
-        if abs(1+rotation[1,0]) < .01:
-            return 1        
-        if abs(1+rotation[2,0]) < .01:
-            return 2
-        if abs(1-rotation[1,0]) < .01:
-            return 3
-
-    def find_block_state(self, block):
-        self.listener.waitForTransform(self.parent_frame, block, rospy.Time(), rospy.Duration(4.0))
-        t = self.listener.getLatestCommonTime(self.parent_frame, block)
-        _, quat = self.listener.lookupTransform(self.parent_frame, block, t)
-        return self.find_state(quat)
 
 if __name__ == '__main__':
     # For recording Trajectory
@@ -362,7 +209,13 @@ if __name__ == '__main__':
     endpointLoad = rospy.ServiceProxy('endpoint_load', endpoint_load)
 
     right_regrasper = Regrasper('right')
-    print(right_regrasper.find_block_state('block_0'))
-    # right_regrasper.reorient('block_0', 'block_1')
+    # right_regrasper.flip('block_0')
+    # right_regrasper.flip('block_0')
+    # right_regrasper.flip('block_0')
+    # right_regrasper.flip('block_0')
+    #right_regrasper.stack_bricks('block_0', 'block_1')
+    #right_regrasper.adjust_yaw('block_0')
+    right_regrasper.flip('block_0')    
+    right_regrasper.stack_bricks('block_0', 'block_1')
 
 

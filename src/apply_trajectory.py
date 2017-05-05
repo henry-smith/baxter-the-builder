@@ -1,7 +1,35 @@
 #!/usr/bin/env python
+
+# Copyright (c) 2013-2015, Rethink Robotics
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice,
+#    this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+# 3. Neither the name of the Rethink Robotics nor the names of its
+#    contributors may be used to endorse or promote products derived from
+#    this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+
 """
-Baxter_the_builder trajectory applyer
-Author: Henry Smith & Andrew Chan
+Baxter RSDK Joint Position Example: file playback
+Modified for project by Henry Smith and Andrew Chan
 """
 import argparse
 import sys
@@ -23,8 +51,10 @@ def try_float(x):
 def clean_line(line, names):
     """
     Cleans a single line of recorded joint positions
+
+    @param line: the line described in a list to process
+    @param names: joint name keys
     """
-    
     #convert the line of strings to a float or None
     line = [try_float(x) for x in line.rstrip().split(',')]
     #zip the values with the joint names
@@ -113,59 +143,3 @@ def map_file(filename, loops=1):
                 rate.sleep()
         print
     return True
-
-
-def main():
-    """RSDK Joint Position Example: File Playback
-
-    Uses Joint Position Control mode to play back a series of
-    recorded joint and gripper positions.
-
-    Run the joint_recorder.py example first to create a recording
-    file for use with this example. This example uses position
-    control to replay the recorded positions in sequence.
-
-    Note: This version of the playback example simply drives the
-    joints towards the next position at each time stamp. Because
-    it uses Position Control it will not attempt to adjust the
-    movement speed to hit set points "on time".
-    """
-    epilog = """
-Related examples:
-  joint_recorder.py; joint_trajectory_file_playback.py.
-    """
-    arg_fmt = argparse.RawDescriptionHelpFormatter
-    parser = argparse.ArgumentParser(formatter_class=arg_fmt,
-                                     description=main.__doc__,
-                                     epilog=epilog)
-    parser.add_argument(
-        '-f', '--file', metavar='PATH', required=True,
-        help='path to input file'
-    )
-    parser.add_argument(
-        '-l', '--loops', type=int, default=1,
-        help='number of times to loop the input file. 0=infinite.'
-    )
-    args = parser.parse_args(rospy.myargv()[1:])
-
-    print("Initializing node... ")
-    rospy.init_node("rsdk_joint_position_file_playback")
-    print("Getting robot state... ")
-    rs = baxter_interface.RobotEnable(CHECK_VERSION)
-    init_state = rs.state().enabled
-
-    def clean_shutdown():
-        print("\nExiting example...")
-        if not init_state:
-            print("Disabling robot...")
-            rs.disable()
-    rospy.on_shutdown(clean_shutdown)
-
-    print("Enabling robot... ")
-    rs.enable()
-
-    map_file(args.file, args.loops)
-
-
-if __name__ == '__main__':
-    main()
