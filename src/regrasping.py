@@ -334,19 +334,57 @@ class Regrasper:
         # pinverint trans.rotation_matrix(angle, direction)
 
     def find_state(self, quaternion):
-        rotation = trans.quaternion_matrix(quaternion)
-        if abs(1-rotation[0,0]) < .01:
-            return 5
-        if abs(1-abs(rotation[0,0])) < .01:
-            return 0
-        if abs(1-rotation[2,0]) < .01:
-            return 4
-        if abs(1+rotation[1,0]) < .01:
-            return 1        
-        if abs(1+rotation[2,0]) < .01:
-            return 2
-        if abs(1-rotation[1,0]) < .01:
-            return 3
+        """
+        State is represented as:
+        -(face on table, direction of 'front' AR tag) for 
+        right side up or upside down blocks
+        -(face on table, direction of top) otherwise
+        """
+        rot = trans.quaternion_matrix(quaternion)
+        bot_face, direction = None, None
+        print rot[0,0]
+        if abs(1-rot[0,0]) < .01:
+            bot_face = 5
+        elif abs(1-rot[2,0]) < .01:
+            bot_face = 4
+        elif abs(1+rot[1,0]) < .01:
+            bot_face = 1        
+        elif abs(1+rot[2,0]) < .01:
+            bot_face = 2
+        elif abs(1-rot[1,0]) < .01:
+            bot_face = 3
+        else:
+            bot_face = 0
+
+        if bot_face in {1,2,3,4}:
+            ang = trans.angle_between_vectors([1,0,0], rot[:3,1])
+            dot = np.dot(np.array([0,1,0]), rot[:3,1])
+            if bot_face in {1,4}:
+                dot = -dot
+            if ang < .6:
+                direction = 1
+            elif ang > 2.8:
+                direction = 3
+            elif dot > 0:
+                direction = 0
+            else:
+                direction = 2
+        else:
+            ang =  trans.angle_between_vectors([0,0,1], rot[:3,1])
+            dot =  np.dot(np.array([0,1,0]), rot[:3,1])
+            if bot_face == 0:
+                ang = abs(ang-3.14)
+            if ang < .6:
+                direction = 0
+            elif ang > 2.8:
+                direction = 2
+            elif dot > 0:
+                direction = 3
+            else:
+                direction = 1
+
+        return (bot_face, direction)
+
 
     def find_block_state(self, block):
         self.listener.waitForTransform(self.parent_frame, block, rospy.Time(), rospy.Duration(4.0))
@@ -362,7 +400,9 @@ if __name__ == '__main__':
     endpointLoad = rospy.ServiceProxy('endpoint_load', endpoint_load)
 
     right_regrasper = Regrasper('right')
-    print(right_regrasper.find_block_state('block_0'))
+    while not rospy.is_shutdown():
+        print(right_regrasper.find_block_state('block_0'))
+        rospy.sleep(1.0)
     # right_regrasper.reorient('block_0', 'block_1')
 
 
