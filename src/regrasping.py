@@ -35,6 +35,17 @@ from baxter_core_msgs.srv import (
 
 PI = np.pi
 
+FLIP_MOVES = {((1,0),(0,0)),((1,2),(5,0)),((4,2),(5,3)),((4,0),(0,1)),((3,0),(0,2)),((3,2),(5,2)),((2,0),(0,3)),((2,2),(5,1)),((0,0),(3,2)),((0,1),(2,2)),((0,2),(1,2)),((0,3),(4,2)),((5,0),(3,0)),((5,1),(4,0)),((5,2),(1,0)),((5,3),(2,0))}
+
+SPIN_MOVES = []
+for i in range(6):
+    for j in range(3):
+        SPIN_MOVES.append(((i, (j+1)%4),(i, j)))
+SPIN_MOVES = set(SPIN_MOVES)
+
+MOVES = [('flip',FLIP_MOVES), ('spin',SPIN_MOVES)]
+
+
 class Regrasper:
     def __init__(self, limb):
         rospy.init_node('regrasping_' + limb)
@@ -276,40 +287,6 @@ class Regrasper:
         self.move_to_point(b_pos + np.array([0,0,.09]), quaternion)
         return b_pos
 
-    def reorient(self, block, orientation):
-        if not self.listener.frameExists(block):
-            print block + ' not found'
-            exit(0)
-
-        # Finds block position and orientation
-        t = self.listener.getLatestCommonTime(self.parent_frame, block)
-        b_pos, b_quat = self.listener.lookupTransform(self.parent_frame, block, t)
-
-    def record_orientation_change(self, block):
-        if not self.listener.frameExists(block):
-            print block + ' not found'
-            exit(0)
-
-        # Finds block position and orientation
-        self.listener.waitForTransform(self.parent_frame, block, rospy.Time(), rospy.Duration(4.0))
-        t = self.listener.getLatestCommonTime(self.parent_frame, block)
-        pos1, quat1 = self.listener.lookupTransform(self.parent_frame, block, t)
-
-        print trans.quaternion_matrix(quat1)
-
-        self.flip(block)
-
-        # Finds block position and orientation
-        self.listener.waitForTransform(self.parent_frame, block, rospy.Time(), rospy.Duration(4.0))
-        t = self.listener.getLatestCommonTime(self.parent_frame, block)
-        pos2, quat2 = self.listener.lookupTransform(self.parent_frame, block, t)
-
-        print trans.quaternion_matrix(quat2)
-
-        print(trans.quaternion_matrix(np.array(quat2) - np.array(quat1)))
-
-        print(np.array(trans.quaternion_matrix(quat2))- np.array(trans.quaternion_matrix(quat1)))
-
     def reorient(self, block, goal, isBlock=True):
         if not self.listener.frameExists(block):
             print block + ' not found'
@@ -318,20 +295,30 @@ class Regrasper:
             if not self.listener.frameExists(goal):
                 print goal + ' not found'
                 exit(0)
-            self.listener.waitForTransform(self.parent_frame, goal, rospy.Time(), rospy.Duration(4.0))
-            t = self.listener.getLatestCommonTime(self.parent_frame, goal)
-            _, goal = self.listener.lookupTransform(self.parent_frame, goal, t)
+            end = self.find_block_state(goal)
+        else:
+            end = self.find_state(goal)
 
-        # Finds block position and orientation
-        self.listener.waitForTransform(self.parent_frame, block, rospy.Time(), rospy.Duration(4.0))
-        t = self.listener.getLatestCommonTime(self.parent_frame, block)
-        pos1, quat1 = self.listener.lookupTransform(self.parent_frame, block, t)
+        start = self.find_block_state(block)
+        print("start" + str(start))
+        print("end" + str(end))
+
+
         queue = []
-        print goal
-        print quat1
-        print trans.quaternion_matrix(goal)
-        print trans.quaternion_matrix(quat1)
-        # pinverint trans.rotation_matrix(angle, direction)
+        i = 0
+        queue.append((start, None))
+        while not rospy.is_shutdown():
+            nxt = queue[i]
+            i = i + 1
+            if nxt[0] == end:
+                break
+            for moves in MOVES:
+                for move in moves[1]:
+                    if move[0] == nxt[0]:
+                        queue.append((move[1],moves[0], nxt))
+        print nxt
+
+
 
     def find_state(self, quaternion):
         """
@@ -342,7 +329,6 @@ class Regrasper:
         """
         rot = trans.quaternion_matrix(quaternion)
         bot_face, direction = None, None
-        print rot[0,0]
         if abs(1-rot[0,0]) < .01:
             bot_face = 5
         elif abs(1-rot[2,0]) < .01:
@@ -356,9 +342,13 @@ class Regrasper:
         else:
             bot_face = 0
 
+        # Literally magic
         if bot_face in {1,2,3,4}:
             ang = trans.angle_between_vectors([1,0,0], rot[:3,1])
-            dot = np.dot(np.array([0,1,0]), rot[:3,1])
+            if bot_face in {1,3}:                
+                dot = np.dot(np.array([0,0,1]), rot[:3,1])
+            else:
+                dot = np.dot(np.array([0,1,0]), rot[:3,1])
             if bot_face in {1,4}:
                 dot = -dot
             if ang < .6:
@@ -400,9 +390,10 @@ if __name__ == '__main__':
     endpointLoad = rospy.ServiceProxy('endpoint_load', endpoint_load)
 
     right_regrasper = Regrasper('right')
-    while not rospy.is_shutdown():
-        print(right_regrasper.find_block_state('block_0'))
-        rospy.sleep(1.0)
+    # while not rospy.is_shutdown():
+    #     print(right_regrasper.find_block_state('block_0'))
+    #     rospy.sleep(1.0)
     # right_regrasper.reorient('block_0', 'block_1')
+    right_regrasper.reorient('block_0', 'block_1')
 
 
