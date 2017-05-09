@@ -35,13 +35,13 @@ from baxter_core_msgs.srv import (
 
 PI = np.pi
 
-FLIP_MOVES = {((1,0),(0,0)),((1,2),(5,0)),((4,2),(5,3)),((4,0),(0,1)),((3,0),(0,2)),((3,2),(5,2)),((2,0),(0,3)),((2,2),(5,1)),((0,0),(3,2)),((0,1),(2,2)),((0,2),(1,2)),((0,3),(4,2)),((5,0),(3,0)),((5,1),(4,0)),((5,2),(1,0)),((5,3),(2,0))}
+FLIP_MOVES = [((1,0),(0,0)),((1,2),(5,0)),((4,2),(5,3)),((4,0),(0,1)),((3,0),(0,2)),((3,2),(5,2)),((2,0),(0,3)),((2,2),(5,1)),((0,0),(3,2)),((0,1),(2,2)),((0,2),(1,2)),((0,3),(4,2)),((5,0),(3,0)),((5,1),(4,0)),((5,2),(1,0)),((5,3),(2,0))]
 
 SPIN_MOVES = []
 for i in range(6):
-    for j in range(3):
+    for j in range(4):
         SPIN_MOVES.append(((i, (j+1)%4),(i, j)))
-SPIN_MOVES = set(SPIN_MOVES)
+SPIN_MOVES = SPIN_MOVES
 
 MOVES = [('flip',FLIP_MOVES), ('spin',SPIN_MOVES)]
 
@@ -195,7 +195,7 @@ class Regrasper:
 
     def flip(self, block):
         # Grabs from top and realigns with base
-        b_pos = self.align_with_top(block, True)
+        b_pos = self.align_with_top(block, False)
 
         # Rotates arm upwards
         positions = self.limb.joint_angles()
@@ -209,7 +209,7 @@ class Regrasper:
         cmd = copy.deepcopy(velocities)
         for joint in cmd.keys():
             cmd[joint] = 0
-        cmd['right_w2'] = .5
+        cmd['right_w2'] = -.5
         while not rospy.is_shutdown():
             self.limb.set_joint_velocities(cmd)
             t = self.listener.getLatestCommonTime(self.parent_frame, 'right_gripper')
@@ -225,26 +225,7 @@ class Regrasper:
         # Places brick in new orientation at original position
         self.move_to_point(b_pos + np.array([0,0,.04]), quaternion)
         self.gripper.open()
-        self.move_to_point(b_pos + np.array([0,0,.1]), quaternion)
-
-    def flip_v2(self, block):
-        # Grabs from top and realigns with base
-        b_pos = self.align_with_top(block, True)
-
-        # Rotates arm upwards
-        positions = self.limb.joint_angles()
-        cmd = copy.deepcopy(positions)
-        cmd['right_w1'] -= PI/2
-        self.limb.move_to_joint_positions(cmd)
-
-        # Grabs current orientation
-        t = self.listener.getLatestCommonTime(self.parent_frame, 'right_gripper')
-        position, quaternion = self.listener.lookupTransform(self.parent_frame, 'right_gripper', t)
-
-        # Places brick in new orientation at original position
-        self.move_to_point(b_pos + np.array([0,0,.04]), quaternion)
-        self.gripper.open()
-        self.move_to_point(b_pos + np.array([0,0,.1]), quaternion)
+        self.move_to_point(b_pos + np.array([0,0,.3]), quaternion)
 
     def stack_bricks(self, b1, b2):
         if not self.listener.frameExists(b2):
@@ -287,7 +268,7 @@ class Regrasper:
         self.move_to_point(b_pos + np.array([0,0,.09]), quaternion)
         return b_pos
 
-    def reorient(self, block, goal, isBlock=True):
+    def find_path(self, block, goal, isBlock=True):
         if not self.listener.frameExists(block):
             print block + ' not found'
             exit(0)
@@ -303,6 +284,8 @@ class Regrasper:
         print("start" + str(start))
         print("end" + str(end))
 
+        if start == end:
+            return True
 
         queue = []
         i = 0
@@ -316,9 +299,23 @@ class Regrasper:
                 for move in moves[1]:
                     if move[0] == nxt[0]:
                         queue.append((move[1],moves[0], nxt))
-        print nxt
+        
+        path = []
+        while nxt[1] is not None:
+            path.append(nxt[1])
+            nxt = nxt[2]
+        print path
+        return path
 
-
+    def reorient(self, block, goal, isBlock=True):
+        path = self.find_path(block, goal)
+        while path != True:
+            if path[0] == 'spin':
+                self.adjust_yaw(block)
+            else:
+                self.flip(block)
+            path = self.find_path(block, goal)
+        print 'FINISHED REORIENTATION'
 
     def find_state(self, quaternion):
         """
@@ -393,7 +390,8 @@ if __name__ == '__main__':
     # while not rospy.is_shutdown():
     #     print(right_regrasper.find_block_state('block_0'))
     #     rospy.sleep(1.0)
-    # right_regrasper.reorient('block_0', 'block_1')
     right_regrasper.reorient('block_0', 'block_1')
+    #right_regrasper.find_path('block_0', 'block_1')
+    #right_regrasper.flip('block_0')
 
 
