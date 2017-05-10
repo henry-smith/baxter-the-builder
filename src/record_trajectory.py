@@ -1,3 +1,10 @@
+#!/usr/bin/env python
+"""
+Baxter_the_builder trajectory recorder, mild edit of baxter_examples file
+Author: Henry Smith & Andrew Chan
+"""
+
+
 # Copyright (c) 2013-2015, Rethink Robotics
 # All rights reserved.
 #

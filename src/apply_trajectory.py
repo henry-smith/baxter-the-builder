@@ -1,5 +1,10 @@
 #!/usr/bin/env python
 
+"""
+Baxter_the_builder trajectory replay, mild edit of baxter_examples file
+Modified by Henry Smith & Andrew Chan
+"""
+
 # Copyright (c) 2013-2015, Rethink Robotics
 # All rights reserved.
 #
@@ -27,10 +32,7 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-"""
-Baxter RSDK Joint Position Example: file playback
-Modified for project by Henry Smith and Andrew Chan
-"""
+
 import argparse
 import sys
 
