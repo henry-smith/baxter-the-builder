@@ -103,13 +103,17 @@ class JointRecorder(object):
                 while not self.done():
                     # Look for gripper button presses
                     if self._io_left_lower.state:
-                        self._gripper_left.open()
+                        self.stop()
+                        # self._gripper_left.open()
                     elif self._io_left_upper.state:
-                        self._gripper_left.close()
+                        self.stop()
+                        # self._gripper_left.close()
                     if self._io_right_lower.state:
-                        self._gripper_right.open()
+                        self.stop()
+                        # self._gripper_right.open()
                     elif self._io_right_upper.state:
-                        self._gripper_right.close()
+                        self.stop()
+                        # self._gripper_right.close()
                     angles_left = [self._limb_left.joint_angle(j)
                                    for j in joints_left]
                     angles_right = [self._limb_right.joint_angle(j)
